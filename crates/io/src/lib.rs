@@ -103,3 +103,60 @@ impl FrameWriter {
         self.s.write_all(&f.encode())
     }
 }
+
+pub mod codec {
+    // f32 samples -> u16 quantized (display window viewer)
+    pub fn spectrum_enc(s: &[f32]) -> Vec<u8> {
+        let mut b = Vec::with_capacity(2 + s.len() * 2);
+        b.extend_from_slice(&(s.len() as u16).to_le_bytes());
+        for &v in s {
+            let q = v.clamp(0.0, 4095.0) as u16;
+            b.extend_from_slice(&q.to_le_bytes());
+        }
+        b
+    }
+    pub fn spectrum_dec(b: &[u8]) -> Vec<f32> {
+        let n = u16::from_le_bytes([b[0], b[1]]) as usize;
+        (0..n)
+            .map(|i| u16::from_le_bytes([b[2 + i * 2], b[3 + i * 2]]) as f32)
+            .collect()
+    }
+    pub fn depth_enc(d: &[f32]) -> Vec<u8> {
+        let mut b = Vec::with_capacity(2 + d.len() * 4);
+        b.extend_from_slice(&(d.len() as u16).to_le_bytes());
+        for v in d {
+            b.extend_from_slice(&v.to_le_bytes());
+        }
+        b
+    }
+    pub fn depth_dec(b: &[u8]) -> Vec<f32> {
+        let n = u16::from_le_bytes([b[0], b[1]]) as usize;
+        (0..n)
+            .map(|i| {
+                f32::from_le_bytes([b[2 + i * 4], b[3 + i * 4], b[4 + i * 4], b[5 + i * 4]])
+            })
+            .collect()
+    }
+    pub fn features_enc(f: &[f32; 8]) -> Vec<u8> {
+        let mut b = Vec::with_capacity(32);
+        for v in f {
+            b.extend_from_slice(&v.to_le_bytes());
+        }
+        b
+    }
+    pub fn features_dec(b: &[u8]) -> [f32; 8] {
+        let mut out = [0.0f32; 8];
+        for (i, o) in out.iter_mut().enumerate() {
+            *o = f32::from_le_bytes([b[i * 4], b[i * 4 + 1], b[i * 4 + 2], b[i * 4 + 3]]);
+        }
+        out
+    }
+    pub fn verdict_enc(class: u8, conf: f32) -> Vec<u8> {
+        let mut b = vec![class];
+        b.extend_from_slice(&conf.to_le_bytes());
+        b
+    }
+    pub fn verdict_dec(b: &[u8]) -> (u8, f32) {
+        (b[0], f32::from_le_bytes([b[1], b[2], b[3], b[4]]))
+    }
+}
