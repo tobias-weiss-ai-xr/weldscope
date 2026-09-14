@@ -1,0 +1,4 @@
+[package]
+name = "ai"
+version.workspace = true
+edition.workspace = true

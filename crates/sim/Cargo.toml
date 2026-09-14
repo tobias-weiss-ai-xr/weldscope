@@ -1,0 +1,4 @@
+[package]
+name = "sim"
+version.workspace = true
+edition.workspace = true

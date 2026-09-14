@@ -1,0 +1,7 @@
+/target
+/data
+/web/wasm/pkg
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

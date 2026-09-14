@@ -1,0 +1,4 @@
+[package]
+name = "weldscope"
+version.workspace = true
+edition.workspace = true

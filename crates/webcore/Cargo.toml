@@ -1,0 +1,6 @@
+[package]
+name = "webcore"
+version.workspace = true
+edition.workspace = true
+[lib]
+crate-type = ["cdylib", "rlib"]
