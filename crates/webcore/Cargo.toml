@@ -2,5 +2,12 @@
 name = "webcore"
 version.workspace = true
 edition.workspace = true
+
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+core = { path = "../core" }
+sim = { path = "../sim" }
+wasm-bindgen.workspace = true
+serde_json.workspace = true
