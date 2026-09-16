@@ -60,7 +60,9 @@ docs/wire-format.md
 
 ## Notes
 Data is synthetic by design: public in-process weld-OCT data does not exist
-(verified via GitHub/paper searches, 2026-09); the simulator is
+(verified across arXiv/OpenAlex/Zenodo/GitHub, 2026-09 — see
+[`docs/literature.md`](docs/literature.md) for the 15 empirical papers and
+what their systems used); the simulator is
 physically consistent (spectrum = IFFT of designed reflectivity) so the FFT
 chain is exercised with realistic signals. A real sensor plugs in behind the
 `acq` frame producer without touching the core.
