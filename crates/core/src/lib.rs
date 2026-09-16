@@ -40,6 +40,55 @@ mod tests {
         oct.process(&spec, &mut profile);
         assert!(oct.peak_depth(&profile, 100, 400).is_none());
     }
+
+    // ---- property/invariant tests ----
+
+    /// Same input spectrum buffer -> byte-identical profile across repeated
+    /// calls and across fresh instances (no hidden RNG/threading state).
+    #[test]
+    fn process_is_deterministic() {
+        // tiny LCG so the spectrum is arbitrary but reproducible (no rand dep)
+        let mut s = 0x1234_5678u32;
+        let mut spec = vec![0.0f32; SPEC_BINS];
+        for (i, v) in spec.iter_mut().enumerate() {
+            s = s.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            *v = 100.0
+                + 80.0 * (2.0 * std::f32::consts::PI * 300.0 / SPEC_BINS as f32 * i as f32).cos()
+                + ((s >> 24) % 7) as f32
+                - 3.0;
+        }
+        let mut o = oct();
+        let (mut a, mut b, mut c) = (
+            vec![0.0; o.depth_bins],
+            vec![0.0; o.depth_bins],
+            vec![0.0; o.depth_bins],
+        );
+        o.process(&spec, &mut a);
+        o.process(&spec, &mut b);
+        assert_eq!(a, b, "repeated call on same SdOct must be byte-identical");
+        let mut fresh = oct();
+        fresh.process(&spec, &mut c);
+        assert_eq!(a, c, "fresh SdOct must reproduce the profile exactly");
+    }
+
+    /// 'No signal' (all-zero) spectrum: the (p+1).log2() floor keeps every
+    /// profile value finite — exactly 0 here — and no NaN peak is reported.
+    #[test]
+    fn zero_spectrum_yields_finite_profile() {
+        let spec = vec![0.0; SPEC_BINS];
+        let mut oct = oct();
+        let mut profile = vec![0.0; oct.depth_bins];
+        oct.process(&spec, &mut profile);
+        assert!(
+            profile.iter().all(|v| v.is_finite()),
+            "log-magnitude must stay bounded (no NaN/inf)"
+        );
+        assert!(
+            profile.iter().all(|v| *v == 0.0),
+            "zero input: (0+1).log2() floor must be exactly 0"
+        );
+        assert!(oct.peak_depth(&profile, 100, 400).is_none());
+    }
 }
 
 use num_complex::Complex32;

@@ -37,6 +37,97 @@ mod tests {
         assert_eq!(a, b);
         assert!(a.iter().any(|&v| v != 0.0));
     }
+
+    // ---- property/invariant tests (8 seeds x every defect kind) ----
+
+    const FRAMES: usize = 4096;
+    const DT: f64 = 1.0 / 80_000.0; // mirrors KeyholeModel::dt
+    const DEFECT_WINDOW: (f64, f64) = (0.008, 0.024);
+
+    /// Depth trace over FRAMES frames, driving time directly: depth() depends
+    /// only on t (and hash01(frame)), not on advance()'s spectrum FFT, so this
+    /// exercises the identical depth trace at negligible cost.
+    fn trace(seed: u64, defects: &[(f64, f64, Defect)]) -> Vec<f32> {
+        let mut c = cfg(seed);
+        c.defects = defects.to_vec();
+        let mut m = KeyholeModel::new(c);
+        (0..FRAMES)
+            .map(|f| {
+                m.t = f as f64 * DT;
+                m.depth()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn keyhole_invariants_across_seeds_and_defects() {
+        let w0 = (DEFECT_WINDOW.0 / DT) as usize;
+        let w1 = (DEFECT_WINDOW.1 / DT) as usize;
+        let kinds = [
+            Defect::None,
+            Defect::Spatter,
+            Defect::Pore,
+            Defect::Incomplete,
+            Defect::Humping,
+        ];
+        for seed in 0..8u64 {
+            let base = trace(seed, &[]);
+            for kind in kinds {
+                let tr = trace(seed, &[(DEFECT_WINDOW.0, DEFECT_WINDOW.1, kind)]);
+                for &d in &tr {
+                    assert!(d.is_finite(), "seed {seed} {kind:?}: non-finite depth {d}");
+                    // documented valid range: depth() clamps to
+                    // [1.0, SPEC_BINS * 0.45]
+                    assert!(
+                        (1.0..=SPEC_BINS as f32 * 0.45).contains(&d),
+                        "seed {seed} {kind:?}: depth {d} outside [1, SPEC_BINS*0.45]"
+                    );
+                }
+                // window mean/std vs the defect-free baseline at the same frames
+                let n = (w1 - w0) as f32;
+                let stats = |t: &[f32]| {
+                    let (mut s, mut s2) = (0.0f32, 0.0f32);
+                    for &v in &t[w0..w1] {
+                        s += v;
+                        s2 += v * v;
+                    }
+                    let mean = s / n;
+                    (mean, (s2 / n - mean * mean).max(0.0).sqrt())
+                };
+                let (mean, std) = stats(&tr);
+                let (bmean, bstd) = stats(&base);
+                match kind {
+                    Defect::None => {
+                        let maxd = tr
+                            .iter()
+                            .zip(&base)
+                            .map(|(a, b)| (a - b).abs())
+                            .fold(0.0f32, f32::max);
+                        assert!(maxd < 1e-6, "seed {seed}: None deviates by {maxd}");
+                    }
+                    // Spatter adds zero-mean +-30-bin jitter, so its signature
+                    // is variability, not mean (prose said "up"; adapted to the
+                    // model's real invariant). Humping is a +-20-bin oscillation:
+                    // same std-up signature. Both exceed the ~7-bin baseline std
+                    // several-fold, so the per-seed sign is noise-robust.
+                    Defect::Spatter | Defect::Humping => {
+                        assert!(
+                            std > bstd,
+                            "seed {seed} {kind:?}: window std {std} not above baseline {bstd}"
+                        );
+                    }
+                    // Pore multiplies z by ~0.825 on average, Incomplete ramps
+                    // 0.80 -> 0.35: both must pull the window mean down.
+                    Defect::Pore | Defect::Incomplete => {
+                        assert!(
+                            mean < bmean,
+                            "seed {seed} {kind:?}: window mean {mean} not below baseline {bmean}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 use num_complex::Complex32;

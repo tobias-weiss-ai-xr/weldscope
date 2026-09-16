@@ -174,3 +174,137 @@ pub mod codec {
         (b[0], f32::from_le_bytes([b[1], b[2], b[3], b[4]]))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Tiny deterministic LCG (numerical-recipes constants) — fuzz inputs
+    /// without a rand dependency.
+    struct Lcg(u64);
+    impl Lcg {
+        fn next(&mut self) -> u64 {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            self.0
+        }
+        fn byte(&mut self) -> u8 {
+            (self.next() >> 33) as u8
+        }
+    }
+
+    fn payload(l: &mut Lcg, n: usize) -> Vec<u8> {
+        (0..n).map(|_| l.byte()).collect()
+    }
+
+    /// 50 LCG-derived frames across every FrameType: decode recovers every
+    /// field and the envelope roundtrips to byte-identical output.
+    #[test]
+    fn frame_roundtrip_is_byte_exact() {
+        let mut l = Lcg(42);
+        let types = [
+            FrameType::Spectrum,
+            FrameType::DepthTrace,
+            FrameType::Features,
+            FrameType::Verdict,
+            FrameType::Hello,
+            FrameType::Bye,
+        ];
+        for i in 0..50u64 {
+            let seq = l.next();
+            let ts = l.next();
+            let pl = payload(&mut l, (i as usize * 7) % 257);
+            let f = Frame::new(types[(i % 6) as usize], seq, ts, pl);
+            let bytes = f.encode();
+            let g = Frame::decode(&bytes).expect("valid frame must decode");
+            assert_eq!(g.ty, f.ty);
+            assert_eq!(g.seq, f.seq);
+            assert_eq!(g.ts_ns, f.ts_ns);
+            assert_eq!(g.payload, f.payload);
+            assert_eq!(g.encode(), bytes, "re-encode must be byte-identical");
+        }
+    }
+
+    /// Any prefix shorter than the full envelope decodes to None — never a
+    /// panic (decode is Option-based; prose's "Err" maps to None here).
+    #[test]
+    fn truncated_input_is_never_a_panic() {
+        let mut l = Lcg(7);
+        for _ in 0..50 {
+            let seq = l.next();
+            let ts = l.next();
+            let f = Frame::new(FrameType::DepthTrace, seq, ts, payload(&mut l, 64));
+            let bytes = f.encode();
+            for k in 0..bytes.len() {
+                assert!(
+                    Frame::decode(&bytes[..k]).is_none(),
+                    "truncation to {k} bytes must be rejected"
+                );
+            }
+        }
+    }
+
+    /// Corrupt 4 distinct bytes of 50 LCG packets: decode must reject (None)
+    /// or yield a different packet — never an identical one, never a panic.
+    /// No AcqPacket type exists in this crate; Frame is the wire envelope, so
+    /// this is the closest equivalent invariant.
+    #[test]
+    fn corrupted_packet_is_rejected_or_changed() {
+        let mut l = Lcg(99);
+        for _ in 0..50 {
+            let seq = l.next();
+            let ts = l.next();
+            let f = Frame::new(FrameType::Spectrum, seq, ts, payload(&mut l, 128));
+            let bytes = f.encode();
+            let mut cor = bytes.clone();
+            // Skip offset 2: the version byte is unchecked by decode, so a
+            // flip there is legitimately a valid, identical packet.
+            let mut offs: Vec<usize> = Vec::with_capacity(4);
+            while offs.len() < 4 {
+                let p = (l.next() as usize) % bytes.len();
+                if p != 2 && !offs.contains(&p) {
+                    offs.push(p);
+                    cor[p] ^= l.byte() | 1; // nonzero flip
+                }
+            }
+            if let Some(g) = Frame::decode(&cor) {
+                let same = g.ty == f.ty
+                    && g.seq == f.seq
+                    && g.ts_ns == f.ts_ns
+                    && g.payload == f.payload;
+                assert!(!same, "4-byte corruption decoded to an identical packet");
+            }
+        }
+    }
+
+    /// Codec fuzz: 50 LCG payloads per codec roundtrip byte-exactly.
+    /// depth/features/verdict carry raw f32 bit patterns (incl. NaN/inf), so
+    /// equality is checked on re-encoded bytes, not f32 comparison.
+    #[test]
+    fn codec_roundtrips_are_byte_exact() {
+        let mut l = Lcg(1234);
+        for _ in 0..50 {
+            // spectrum: quantized to u16, lossless only within [0, 4095]
+            let spec: Vec<f32> = (0..64).map(|_| (l.next() % 4096) as f32).collect();
+            let b = codec::spectrum_enc(&spec);
+            assert_eq!(codec::spectrum_dec(&b), spec);
+            assert_eq!(codec::spectrum_enc(&codec::spectrum_dec(&b)), b);
+
+            let d: Vec<f32> = (0..16).map(|_| f32::from_bits((l.next() >> 32) as u32)).collect();
+            let db = codec::depth_enc(&d);
+            assert_eq!(codec::depth_enc(&codec::depth_dec(&db)), db);
+
+            let fv: [f32; 8] = [0.0; 8].map(|_| f32::from_bits((l.next() >> 32) as u32));
+            let fb = codec::features_enc(&fv);
+            assert_eq!(codec::features_enc(&codec::features_dec(&fb)), fb);
+
+            let cls = l.next() as u8;
+            let conf = f32::from_bits((l.next() >> 32) as u32);
+            let vb = codec::verdict_enc(cls, conf);
+            let (c2, f2) = codec::verdict_dec(&vb);
+            assert_eq!(codec::verdict_enc(c2, f2), vb);
+        }
+    }
+}
