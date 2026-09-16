@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><title>WeldScope — pipeline &amp; architecture</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Pipeline &amp; architecture</h1>
+  <nav><a href="index.html">← demo</a> · <a href="docs-fft.html">FFT →</a></nav>
+</header>
+<main class="prose">
+  <h2>Modules as separate processes</h2>
+  <pre>
+acq ─[WS01 spectrum frames]─> core ─[depth trace]─> features ─[8-dim vec]─> ai ─[verdict]
+        TCP binary framing, little-endian, per-hop latency stamps
+  </pre>
+  <ul>
+    <li><b>acq</b> (crate sim) — simulated sensor, ring-sourced spectra.</li>
+    <li><b>core</b> (crate core) — the FFT pipeline (this code also runs in
+        your browser via WASM).</li>
+    <li><b>features</b> (crate features) — documented physics-based features:
+        mean/std/min/max, penetration ratio, spatter rate, pore count, humping index.</li>
+    <li><b>ai</b> (crate ai) — softmax over learned linear weights; optional
+        ONNX plug-in path for bring-your-own models.</li>
+  </ul>
+  <h2>Wire format</h2>
+  <p>Frames are magic-prefixed (<code>WS01</code>), length-prefixed, little-endian,
+     with sequence + origin timestamp preserved along the whole chain — see
+     <code>docs/wire-format.md</code>. End-to-end latency is measured as
+     <code>now − ts_ns</code> and reported as mean/p50/p99.</p>
+  <h2>Why Rust here</h2>
+  <p>The depth profile needs one FFT per A-scan at up to hundreds of kHz —
+     a memory-safe system language with zero-GC, deterministic latency and
+     lock-free streaming is a natural fit; the identical crate compiles to
+     WASM for the in-browser demo.</p>
+</main>
+</body>
+</html>

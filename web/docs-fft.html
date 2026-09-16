@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WeldScope — How the FFT pipeline works</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<header>
+  <h1>How the OCT FFT pipeline works</h1>
+  <nav><a href="index.html">← demo</a> · <a href="docs-pipeline.html">system pipeline →</a></nav>
+</header>
+<main class="prose">
+  <h2>Spectral-Domain OCT in one A-scan</h2>
+  <p>A broadband spectrum reflected by the keyhole is captured by a line-sensor.
+     The depth information is <em>encoded in the spectrum's oscillation
+     frequency</em>: a reflector at depth <code>z</code> adds a
+     <code>cos(2·k·z)</code> ripple to the spectrum (k = wavenumber).</p>
+  <p>The Fourier transform turns oscillation frequency → depth. So the core of
+     an SD-OCT system is one <strong>real-to-complex FFT per A-scan</strong>:</p>
+  <ol>
+    <li><strong>Background subtraction</strong> — remove fixed-pattern DC.</li>
+    <li><strong>k-resampling</strong> — spectrometer pixels are ~linear in
+        wavelength; the FFT needs linear-in-k (performed once per dedicated device via
+        a calibration curve; WeldScope keeps the (linear) grid pluggable).</li>
+    <li><strong>Spectral shaping</strong> — a Hann window suppresses sidelobes
+        (shown live below).</li>
+    <li><strong>Zero-padding</strong> to next power of two (2048 → 4096) for
+        finer depth sampling.</li>
+    <li><strong>R2C FFT</strong> (realfft) — one complex depth profile per
+        A-scan; magnitude → log-scaled power = the A-scan.</li>
+  </ol>
+  <h3>Interactive single-spectrum demo</h3>
+  <canvas id="demo" width="900" height="420"></canvas>
+  <div class="controls">
+    <button id="d_play">step</button>
+    <label>wavelength amp
+      <input id="d_amp" type="range" min="0" max="100" value="60">
+    </label>
+    <button id="d_window">toggle Hann</button>
+    <button id="d_pad">toggle zero-pad</button>
+  </div>
+  <p id="d_status">load wasm…</p>
+</main>
+<script type="module" src="docs-fft.js"></script>
+</body>
+</html>
