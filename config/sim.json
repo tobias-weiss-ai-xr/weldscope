@@ -1,0 +1,16 @@
+{
+  "seed": 7,
+  "noise_amp": 4.0,
+  "dc_level": 50.0,
+  "peak_amp": 120.0,
+  "peak_width_bins": 4.0,
+  "depth0_bins": 300.0,
+  "osc_amp_bins": 10.0,
+  "osc_hz": 120.0,
+  "defects": [
+    [0.008, 0.014, "spatter"],
+    [0.020, 0.030, "incomplete"],
+    [0.034, 0.040, "humping"],
+    [0.046, 0.052, "pore"]
+  ]
+}
