@@ -1,0 +1,10 @@
+{
+  "ports": {
+    "acq_out": 40101,
+    "core_out": 40102,
+    "features_out": 40103,
+    "ai_out": 40104
+  },
+  "sim": "config/sim.json",
+  "model": "ai/weights.json"
+}
