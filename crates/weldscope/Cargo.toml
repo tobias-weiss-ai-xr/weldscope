@@ -2,3 +2,10 @@
 name = "weldscope"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+core = { path = "../core" }
+sim = { path = "../sim" }
+features = { path = "../features" }
+ai = { path = "../ai" }
+serde_json.workspace = true
