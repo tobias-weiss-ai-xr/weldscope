@@ -9,7 +9,7 @@
   "osc_hz": 120.0,
   "defects": [
     [0.008, 0.014, "spatter"],
-    [0.020, 0.030, "incomplete"],
+    [0.018, 0.030, "incomplete"],
     [0.034, 0.040, "humping"],
     [0.046, 0.052, "pore"]
   ]

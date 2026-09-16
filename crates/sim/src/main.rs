@@ -24,13 +24,24 @@ fn main() {
 
     let addr = format!("127.0.0.1:{out_port}");
     let mut stream = TcpStream::connect(&addr).expect("connect to core module");
+    stream.set_nodelay(true).unwrap();
     println!("acq: connected to {addr}");
+    let mut seq: u64 = 0;
+    // Pace by spin-wait instead of thread::sleep: on Windows a 12us sleep
+    // actually costs ~0.5 ms (OS timer granularity), capping the stream at
+    // ~1.7 kHz with ms jitter. Spin-wait is us-accurate cross-platform.
+    // 135us == ~7.4 kHz, just under core's sustained rate (~7.6 kHz incl.
+    // codec + socket I/O), so no backlog can accumulate -> latency stays
+    // sub-ms from the first window. Drift-free: if a hiccup puts us behind,
+    // schedule from now (no catch-up burst that would re-age queued frames).
+    let mut next = std::time::Instant::now();
     let mut seq: u64 = 0;
     loop {
         let spec = model.advance();
         let f = Frame::new(FrameType::Spectrum, seq, now_ns(), spectrum_enc(&spec));
         stream.write_all(&f.encode()).unwrap();
         seq += 1;
-        std::thread::sleep(std::time::Duration::from_micros(12)); // ~80 kHz
+        next = next.max(std::time::Instant::now()) + std::time::Duration::from_micros(135);
+        while std::time::Instant::now() < next {}
     }
 }

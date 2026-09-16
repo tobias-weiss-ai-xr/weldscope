@@ -119,7 +119,10 @@ impl KeyholeModel {
                 // > spike_delta, so spatter_rate (fast-step count) can see it.
                 Defect::Spatter => z + (Self::hash01(self.frame()) * 2.0 - 1.0) * 30.0,
                 Defect::Pore => z * (1.0 - 0.35 * (0.5 + 0.5 * (p * 12.0).sin())),
-                Defect::Incomplete => z * (1.0 - 0.65 * p),            // ramp down
+                // onset dip (0.80x) so the first incomplete windows carry a
+                // low-mean signature instead of a high-std one (which read as
+                // humping); floor 0.35z unchanged.
+                Defect::Incomplete => z * (0.80 - 0.45 * p),
                 // fast ±20-bin oscillation that stays above the penetration
                 // threshold: high std without pore-dropout crossings.
                 Defect::Humping => z + 20.0 * (p * 24.0).sin(),

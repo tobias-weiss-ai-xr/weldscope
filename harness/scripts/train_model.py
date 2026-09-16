@@ -41,7 +41,7 @@ def depth_series(cfg):
             elif kind == "pore":
                 z *= 1.0 - 0.35 * (0.5 + 0.5 * math.sin(p * 12.0))
             elif kind == "incomplete":
-                z *= 1.0 - 0.65 * p
+                z *= (0.80 - 0.45 * p)  # onset dip 0.80x, floor 0.35z
             elif kind == "humping":
                 z += 20.0 * math.sin(p * 24.0)  # fast ±20 oscillation, no dropout
         zs.append(min(max(z, 1.0), SPEC_BINS * 0.45))
