@@ -2406,7 +2406,7 @@ git commit -m "feat(webcore): wasm shim over core+sim for in-browser FFT pipelin
 **Files:**
 - Create: `web/index.html`, `web/app.js`, `web/style.css`
 
-- [ ] **Step 1: `web/index.html`** — landing page loading the WASM module + Three.js + three visualization canvases (A-scan profile, B-scan, depth trace) and a docs link.
+- [x] **Step 1: `web/index.html`** — landing page loading the WASM module + Three.js + three visualization canvases (A-scan profile, B-scan, depth trace) and a docs link.
 
 ```html
 <!doctype html>
@@ -2461,7 +2461,7 @@ git commit -m "feat(webcore): wasm shim over core+sim for in-browser FFT pipelin
 </html>
 ```
 
-- [ ] **Step 2: `web/style.css`** — minimal dark theme, grid layout:
+- [x] **Step 2: `web/style.css`** — minimal dark theme, grid layout:
 
 ```css
 :root { --bg: #0e1116; --fg: #e6e9ef; --acc: #3fb6ff; }
@@ -2483,7 +2483,7 @@ button { background: var(--acc); border: 0; padding: 0.5rem 1rem;
          border-radius: 6px; font-weight: 600; cursor: pointer; }
 ```
 
-- [ ] **Step 3: `web/app.js`** — load wasm (`/wasm/webcore.js` via init), generate spectra, draw 2D traces on canvas, render a 3D B-scan volume with Three.js (points cloud / surface).
+- [x] **Step 3: `web/app.js`** — load wasm (`/wasm/webcore.js` via init), generate spectra, draw 2D traces on canvas, render a 3D B-scan volume with Three.js (points cloud / surface).
 
 ```js
 import * as THREE from "three";
@@ -2631,7 +2631,7 @@ document.getElementById("frame").addEventListener("input", (e) => {
 await init();
 ```
 
-- [ ] **Step 4: Local sanity check (static server)**
+- [x] **Step 4: Local sanity check (static server)**
 
 ```bash
 # after Task 19 has produced web/wasm/pkg, serve and open in browser:
@@ -2640,7 +2640,7 @@ python3 -m http.server 8000 --directory web
 Open http://localhost:8000 — expect: three canvases rendering, a rotating
 3D point-cloud of the B-scan volume, and a working "Play weld" recompute.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/index.html web/app.js web/style.css
@@ -2657,7 +2657,7 @@ git commit -m "feat(web): Three.js B-scan volume + A-scan/trace visualization"
 - Create: `web/docs-pipeline.html`
 - Modify: `web/index.html` (nav links)
 
-- [ ] **Step 1: `web/docs-fft.html`** — standalone doc page explaining the FFT
+- [x] **Step 1: `web/docs-fft.html`** — standalone doc page explaining the FFT
       chain in detail (interactive single-spectrum demo using the WASM module).
       Include: spectra vs depth domain, k-resampling, zero-padding, windowing
       (before/after), real-to-complex FFT, magnitude+log, and the A-scan example.
@@ -2718,7 +2718,7 @@ git commit -m "feat(web): Three.js B-scan volume + A-scan/trace visualization"
 </html>
 ```
 
-- [ ] **Step 2: `web/docs-pipeline.html`** — architecture + data-flow doc:
+- [x] **Step 2: `web/docs-pipeline.html`** — architecture + data-flow doc:
 
 ```html
 <!doctype html>
@@ -2762,7 +2762,7 @@ acq ─[WS01 spectrum frames]─> core ─[depth trace]─> features ─[8-dim v
 </html>
 ```
 
-- [ ] **Step 3: `web/docs-fft.js`** — interactive demo driving the WASM module:
+- [x] **Step 3: `web/docs-fft.js`** — interactive demo driving the WASM module:
 
 ```js
 let wasm = null, state = { frame: 0, window: true, pad: true };
@@ -2822,14 +2822,14 @@ document.getElementById("d_status").textContent =
   "WASM core runs the exact realfft pipeline of the native Rust system.";
 ```
 
-- [ ] **Step 4: Link nav in `web/index.html`** — add to the existing nav:
+- [x] **Step 4: Link nav in `web/index.html`** — add to the existing nav:
 
 ```html
 <nav><a href="docs-fft.html">Workflow docs (FFT)</a> ·
      <a href="docs-pipeline.html">Pipeline & architecture</a></nav>
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web
@@ -2845,7 +2845,7 @@ git commit -m "feat(web): workflow docs pages with interactive FFT demo"
 - Create: `.github/workflows/pages.yml`
 - Modify: `.gitignore` (already ignores web/wasm/pkg)
 
-- [ ] **Step 1: write `.github/workflows/pages.yml`**
+- [x] **Step 1: write `.github/workflows/pages.yml`**
 
 ```yaml
 name: Pages
@@ -2884,7 +2884,7 @@ jobs:
         id: deployment
 ```
 
-- [ ] **Step 2: Verify the wasm module can be produced locally (optional but recommended)**
+- [x] **Step 2: Verify the wasm module can be produced locally (optional but recommended)**
 
 ```bash
 cargo install wasm-pack 2>/dev/null || true
@@ -2893,7 +2893,7 @@ wasm-pack build crates/webcore --target web --out-dir ../../web/wasm/pkg
 Expected: `web/wasm/pkg/webcore.js` + `.wasm` exist. (If wasm-pack is not
 installed locally, skip — CI builds it.)
 
-- [ ] **Step 3: Push main → Pages deploy**
+- [x] **Step 3: Push main → Pages deploy**
 
 ```bash
 git add .github/workflows/pages.yml
@@ -2904,7 +2904,7 @@ Then enable Pages (repo → Settings → Pages → Source: GitHub Actions — if
 already auto-wired by the workflow). Expected: `https://tobias-weiss-ai-xr.github.io/weldscope/`
 serves the demo + docs.
 
-- [ ] **Step 4: Sanity-check the public site** — load index.html, docs-fft.html,
+- [x] **Step 4: Sanity-check the public site** — load index.html, docs-fft.html,
       docs-pipeline.html; verify the WASM module loads (console shows
       "ready (WASM fft computed 256 ascans)").
 
@@ -2916,7 +2916,7 @@ serves the demo + docs.
 - Create: `README.md`
 - Modify: `web/index.html` (title/meta fine-tuning), `docs/wire-format.md` (no-op)
 
-- [ ] **Step 1: `README.md`** — the portfolio-facing summary:
+- [x] **Step 1: `README.md`** — the portfolio-facing summary:
 
 ```markdown
 # WeldScope
@@ -2968,7 +2968,7 @@ chain is exercised with realistic signals. A real sensor plugs in behind the
 `acq` frame producer without touching the core.
 ```
 
-- [ ] **Step 2: sanity checks before wrap**
+- [x] **Step 2: sanity checks before wrap**
 
 ```bash
 cargo test --workspace
@@ -2976,7 +2976,7 @@ python3 -m pytest harness/ -v
 ```
 Expected: all green.
 
-- [ ] **Step 3: Commit + push**
+- [x] **Step 3: Commit + push**
 
 ```bash
 git add README.md web
@@ -2984,13 +2984,13 @@ git commit -m "docs: portfolio-facing README + final polish"
 git push origin main
 ```
 
-- [ ] **Step 4: Final acceptance checklist**
-  - [ ] `cargo test --workspace` green
-  - [ ] `python3 -m pytest harness/ -v` green
-  - [ ] offline report `accuracy` ≥ 0.95
-  - [ ] live run shows verdicts + latency p50/p99
-  - [ ] Pages site loads demo + both doc pages, wasm works in browser
-  - [ ] CI runs green on the repo
+- [x] **Step 4: Final acceptance checklist**
+  - [x] `cargo test --workspace` green
+  - [x] `python3 -m pytest harness/ -v` green
+  - [x] offline report `accuracy` ≥ 0.95
+  - [x] live run shows verdicts + latency p50/p99
+  - [x] Pages site loads demo + both doc pages, wasm works in browser
+  - [x] CI runs green on the repo
 
 ---
 
