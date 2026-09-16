@@ -2,3 +2,10 @@
 name = "sim"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+rustfft.workspace = true
+num-complex.workspace = true
+rand.workspace = true
+rand_distr.workspace = true
+serde.workspace = true
