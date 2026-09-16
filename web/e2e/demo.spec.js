@@ -48,28 +48,40 @@ test('demo: wasm boot, canvases, controls, clean console', async ({ page }) => {
   expect((await px('#ascan')).nonzero, 'ascan non-blank').toBeGreaterThan(0);
   expect((await px('#trace')).nonzero, 'trace non-blank').toBeGreaterThan(0);
 
-  // play button: full run recomputed in wasm (256 FFTs) and redraw ran.
-  // NOTE: the sim is seed-deterministic (seed: 7 -> StdRng::seed_from_u64,
-  // see sim's spectrum_is_deterministic_for_seed), so the redrawn trace is
-  // pixel-IDENTICAL, not different — the recompute is proven by the status
-  // text, the pixel-level redraw by the frame slice (#ascan) below.
+  // PLAY: recomputes a NEW weld run in-browser (fresh seed per click).
+  // Regression coverage: the previous demo reused seed 7 on every click, so
+  // Play showed zero visual change (identical pixels) — fixed by reseeding.
   const traceBefore = await px('#trace');
-  await page.click('#play');
-  await expect(page.locator('#status')).toContainText('recomputed 256 FFTs in');
-  const traceAfter = await px('#trace');
-  expect(traceAfter.nonzero, 'trace non-blank after play').toBeGreaterThan(0);
-  expect(traceAfter.hash, 'trace redraw deterministic (seeded sim)').toBe(traceBefore.hash);
-
-  // frame slider: frame 100 redraws the A-scan (different depth profile)
   const ascanBefore = await px('#ascan');
+  await page.click('#play');
+  await expect(page.locator('#status'))
+    .toContainText(/recomputed 256 FFTs \(run 1\) in [\d.]+ ms/);
+  const traceAfter = await px('#trace');
+  const ascanAfter = await px('#ascan');
+  expect(traceAfter.nonzero, 'trace non-blank after play').toBeGreaterThan(0);
+  expect(ascanAfter.nonzero, 'ascan non-blank after play').toBeGreaterThan(0);
+  expect(traceAfter.hash, 'play reseeded -> trace changed').not.toBe(traceBefore.hash);
+  expect(ascanAfter.hash, 'play reseeded -> ascan changed').not.toBe(ascanBefore.hash);
+
+  // frame slider within run 1: frame 200 redraws a different A-scan
+  const ascanF0 = await px('#ascan');
   await page.evaluate(() => {
     const el = document.querySelector('#frame');
-    el.value = '100';
+    el.value = '200';
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  const ascanAfter = await px('#ascan');
-  expect(ascanAfter.nonzero, 'ascan non-blank after frame change').toBeGreaterThan(0);
-  expect(ascanAfter.hash, 'ascan pixels changed on frame 100').not.toBe(ascanBefore.hash);
+  const ascanF200 = await px('#ascan');
+  expect(ascanF200.nonzero, 'ascan non-blank on frame 200').toBeGreaterThan(0);
+  expect(ascanF200.hash, 'frame 200 differs from frame 0 of same run')
+    .not.toBe(ascanF0.hash);
+
+  // second play -> run 2 with yet another seed: trace differs from run 1
+  await page.click('#play');
+  await expect(page.locator('#status')).toContainText(/\(run 2\)/);
+  const traceRun2 = await px('#trace');
+  expect(traceRun2.hash, 'run 2 differs from run 1').not.toBe(traceAfter.hash);
+  // THREE canvas survives recomputes (cloud swapped, not page reload)
+  await expect(page.locator('#three canvas')).toHaveCount(1);
 
   // no page errors; console errors allowed only for the known benign
   // THREE r160 computeBoundingSphere warning (headless-chromium quirk).

@@ -12,19 +12,25 @@ const state = {
 // Recipe matches config/sim.json's serde schema: defects are
 // (start_s, end_s, kind) tuples; 256 frames at 80 kHz = 3.2 ms, so defect
 // windows are scaled into that span to stay visible in the demo run.
-const SIM_JSON = JSON.stringify({
-  seed: 7, noise_amp: 4.0, dc_level: 50.0, peak_amp: 120.0,
-  peak_width_bins: 4.0, depth0_bins: 300.0, osc_amp_bins: 14.0,
-  osc_hz: 120.0,
-  defects: [
-    [0.0004, 0.0009, "spatter"],
-    [0.0014, 0.0022, "incomplete"],
-    [0.0024, 0.0031, "humping"]
-  ],
-});
+// seed is parameterised so each Play click generates a NEW weld run.
+function makeSim(seed) {
+  return JSON.stringify({
+    seed: seed, noise_amp: 4.0, dc_level: 50.0, peak_amp: 120.0,
+    peak_width_bins: 4.0, depth0_bins: 300.0, osc_amp_bins: 14.0,
+    osc_hz: 120.0,
+    defects: [
+      [0.0004, 0.0009, "spatter"],
+      [0.0014, 0.0022, "incomplete"],
+      [0.0024, 0.0031, "humping"]
+    ]
+  });
+}
+const SIM_JSON = makeSim(7);
+let run = 0; // play-run counter; each click reseeds for a fresh run
 
-const DEPTH_BINS = 2048;
-const SPEC_BINS = 2048;
+// DEPTH_BINS is derived from the wasm buffer at init (SdOct depth_bins =
+// SPEC_BINS/2 = 1024 today; deriving keeps the two in lockstep).
+let DEPTH_BINS = 2048;
 
 async function init() {
   const wasm = await import("./wasm/pkg/webcore.js");
@@ -32,6 +38,7 @@ async function init() {
   state.wasm = wasm;
   state.spec = new Float32Array(wasm.generate_spectra(SIM_JSON, state.n));
   state.depth = new Float32Array(wasm.process_run(SIM_JSON, state.n));
+  DEPTH_BINS = state.depth.length / state.n; // true profile width per A-scan
   sliceProfiles();
   build3d();
   drawAll();
@@ -81,9 +88,11 @@ function drawTrace() {
   ctx.stroke();
 }
 
+let scene = null, cloud = null;
+
 function build3d() {
   const container = document.getElementById("three");
-  const scene = new THREE.Scene();
+  scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / 320, 0.1, 5000);
   camera.position.set(0, -40, 90);
   camera.lookAt(0, 0, 0);
@@ -91,20 +100,7 @@ function build3d() {
   renderer.setSize(container.clientWidth, 320);
   container.appendChild(renderer.domElement);
 
-  const pts = [];
-  for (let i = 0; i < state.n; i += 2) {
-    const profile = state.profiles[i];
-    if (!profile) continue;
-    for (let b = 0; b < DEPTH_BINS; b += 4) {
-      const v = profile[b];
-      if (v < 3) continue;
-      pts.push((i / state.n - 0.5) * 30, (b / DEPTH_BINS - 0.5) * 40, -(v / 40) * 6);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
-  const mat = new THREE.PointsMaterial({ color: 0x3fb6ff, size: 0.15 });
-  const cloud = new THREE.Points(geo, mat);
+  cloud = makeCloud();
   scene.add(cloud);
   const axes = new THREE.AxesHelper(20);
   scene.add(axes);
@@ -121,6 +117,31 @@ function build3d() {
   animate();
 }
 
+function makeCloud() {
+  const pts = [];
+  for (let i = 0; i < state.n; i += 2) {
+    const profile = state.profiles[i];
+    if (!profile) continue;
+    for (let b = 0; b < DEPTH_BINS; b += 4) {
+      const v = profile[b];
+      if (!(v >= 3)) continue; // also skips NaN
+      pts.push((i / state.n - 0.5) * 30, (b / DEPTH_BINS - 0.5) * 40, -(v / 40) * 6);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x3fb6ff, size: 0.15 });
+  return new THREE.Points(geo, mat);
+}
+
+function refreshCloud() {
+  if (!scene || !cloud) return;
+  cloud.geometry.dispose();
+  scene.remove(cloud);
+  cloud = makeCloud();
+  scene.add(cloud);
+}
+
 // profile rows from flat depth buffer
 function sliceProfiles() {
   const n = state.n;
@@ -132,12 +153,15 @@ function sliceProfiles() {
 
 document.getElementById("play").addEventListener("click", async () => {
   if (!state.wasm) return;
+  run += 1;
+  const sim = makeSim(7 + run); // fresh seed -> visibly new weld run
   const t0 = performance.now();
-  state.depth = new Float32Array(state.wasm.process_run(SIM_JSON, state.n));
+  state.depth = new Float32Array(state.wasm.process_run(sim, state.n));
   document.getElementById("status").textContent =
-    `recomputed ${state.n} FFTs in ${(performance.now() - t0).toFixed(1)} ms`;
+    `recomputed ${state.n} FFTs (run ${run}) in ${(performance.now() - t0).toFixed(1)} ms`;
   sliceProfiles();
   drawAll();
+  refreshCloud(); // B-scan volume reflects the new run
 });
 document.getElementById("frame").addEventListener("input", (e) => {
   state.frame = parseInt(e.target.value, 10);
