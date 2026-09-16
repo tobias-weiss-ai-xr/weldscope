@@ -93,6 +93,16 @@ impl KeyholeModel {
         KeyholeModel { cfg, t: 0.0, dt, rng, c2c, tmp, noise }
     }
 
+    fn frame(&self) -> u64 {
+        (self.t / self.dt) as u64
+    }
+
+    /// Deterministic [0,1) per-frame value (LCG), mirror of train_model.py hash01.
+    fn hash01(k: u64) -> f32 {
+        let s = k.wrapping_mul(2_654_435_761).wrapping_add(40_503);
+        ((s >> 16) & 0x7fff) as f32 / 32_767.0
+    }
+
     /// Current keyhole depth in bins (before advancing).
     pub fn depth(&self) -> f32 {
         let cfg = &self.cfg;
@@ -105,10 +115,14 @@ impl KeyholeModel {
             let p = ((self.t - t0) / (t1 - t0)).clamp(0.0, 1.0) as f32;
             z = match kind {
                 Defect::None => z,
-                Defect::Spatter => z + 18.0 * (1.0 - p),              // decaying spike
+                // steady ±30-bin scattered-reflection jitter: per-sample steps
+                // > spike_delta, so spatter_rate (fast-step count) can see it.
+                Defect::Spatter => z + (Self::hash01(self.frame()) * 2.0 - 1.0) * 30.0,
                 Defect::Pore => z * (1.0 - 0.35 * (0.5 + 0.5 * (p * 12.0).sin())),
                 Defect::Incomplete => z * (1.0 - 0.65 * p),            // ramp down
-                Defect::Humping => z * (1.0 - 0.35 * (8.0 * p).sin().abs()),
+                // fast ±20-bin oscillation that stays above the penetration
+                // threshold: high std without pore-dropout crossings.
+                Defect::Humping => z + 20.0 * (p * 24.0).sin(),
             };
         }
         z.clamp(1.0, SPEC_BINS as f32 * 0.45)

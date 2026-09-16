@@ -33,7 +33,7 @@ fn main() {
 
     let mut model = KeyholeModel::new(cfg.clone());
     let mut oct = SdOct::new(SPEC_BINS, PAD_LEN, vec![50.0; SPEC_BINS]);
-    let mut fe = FeatureExtractor::new(WIN, 250.0, 30.0);
+    let mut fe = FeatureExtractor::new(WIN, 250.0, 15.0);
 
     let dt = 1.0 / RATE;
     let mut correct = 0usize;

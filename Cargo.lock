@@ -5,6 +5,10 @@ version = 4
 [[package]]
 name = "ai"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "autocfg"
@@ -309,6 +313,13 @@ version = "0.1.0"
 [[package]]
 name = "weldscope"
 version = "0.1.0"
+dependencies = [
+ "ai",
+ "core",
+ "features",
+ "serde_json",
+ "sim",
+]
 
 [[package]]
 name = "zerocopy"
