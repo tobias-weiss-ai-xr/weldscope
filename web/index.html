@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WeldScope — in-process OCT weld quality monitoring</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+  <header>
+    <h1>WeldScope</h1>
+    <p>In-process OCT for laser-weld quality monitoring — real-time FFT pipeline
+       in Rust (same code native + WASM), AI verdicts, Three.js visualization.</p>
+    <nav><a href="docs-fft.html">Workflow docs (FFT &amp; pipeline)</a></nav>
+  </header>
+
+  <section id="viz">
+    <div class="card">
+      <h2>A-scan depth profile</h2>
+      <canvas id="ascan"></canvas>
+    </div>
+    <div class="card">
+      <h2>Keyhole depth trace</h2>
+      <canvas id="trace"></canvas>
+    </div>
+  </section>
+  <section id="viz3d">
+    <div class="card wide">
+      <h2>B-scan volume (Three.js)</h2>
+      <div id="three"></div>
+    </div>
+  </section>
+
+  <section id="controls">
+    <button id="play">Play weld (recompute in-browser WASM)</button>
+    <label>Frame
+      <input id="frame" type="range" min="0" max="255" value="0" step="1">
+    </label>
+    <span id="status">loading wasm…</span>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
