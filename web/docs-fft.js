@@ -53,7 +53,7 @@ document.getElementById("d_pad").onclick = () => {
 };
 document.getElementById("d_status").textContent = "loading…";
 
-const wasmMod = await import("./wasm/webcore.js");
+const wasmMod = await import("./wasm/pkg/webcore.js");
 await wasmMod.default();
 wasm = wasmMod;
 drawSpectrumRow();

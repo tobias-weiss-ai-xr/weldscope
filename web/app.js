@@ -27,7 +27,7 @@ const DEPTH_BINS = 2048;
 const SPEC_BINS = 2048;
 
 async function init() {
-  const wasm = await import("./wasm/webcore.js");
+  const wasm = await import("./wasm/pkg/webcore.js");
   await wasm.default();
   state.wasm = wasm;
   state.spec = new Float32Array(wasm.generate_spectra(SIM_JSON, state.n));
