@@ -26,6 +26,16 @@ jobs:
             --out-dir ../../web/wasm/pkg
       - name: Verify site assets
         run: ls -la web web/wasm/pkg
+      - name: Playwright e2e against built wasm (bun)
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          export PATH=$HOME/.bun/bin:$PATH
+          bunx serve -l 8899 web &
+          sleep 2
+          cd web/e2e
+          bun install --no-audit --no-fund
+          bunx playwright install --with-deps chromium
+          PLAYWRIGHT_BASE_URL=http://localhost:8899 bunx playwright test
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
