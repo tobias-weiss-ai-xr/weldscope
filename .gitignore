@@ -9,3 +9,5 @@ target-wasm/
 
 # taskfleet worktrees (do not commit)
 .tf-worktrees/
+
+node_modules/
