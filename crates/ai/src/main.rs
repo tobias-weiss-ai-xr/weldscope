@@ -9,6 +9,15 @@ fn now_ns() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64
 }
 
+fn print_stats(v: &[u64]) {
+    if v.is_empty() { return; }
+    let mut s = v.to_vec();
+    s.sort_unstable();
+    let p = |q: f64| s[((s.len() - 1) as f64 * q) as usize];
+    let mean = s.iter().sum::<u64>() as f64 / s.len() as f64;
+    println!("latency us: mean={mean:.0} p50={} p99={} n={}", p(0.5), p(0.99), s.len());
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let in_port: u16 = args.iter().skip(1).nth(0).and_then(|a| a.parse().ok()).unwrap_or(40103);
@@ -26,14 +35,22 @@ fn main() {
     println!("ai: connected at {in_port} (sink {})", if sink.is_some() { "on" } else { "off" });
 
     let mut reader = FrameReader::new(up);
+    let mut lat_us: Vec<u64> = Vec::with_capacity(8192);
+    let mut last_print = std::time::Instant::now();
     while let Ok(f) = reader.read() {
         if f.ty != FrameType::Features {
             continue;
         }
         let feat = features_dec(&f.payload);
         let (cls, conf) = clf.predict(&feat);
-        let lat_us = (now_ns() - f.ts_ns) / 1000;
-        println!("verdict: {cls:<12} conf={conf:.2} seq={} lat_us={lat_us}", f.seq);
+        let lat_us_now = (now_ns() - f.ts_ns) / 1000;
+        println!("verdict: {cls:<12} conf={conf:.2} seq={} lat_us={lat_us_now}", f.seq);
+        lat_us.push(lat_us_now);
+        if last_print.elapsed().as_secs() >= 2 {
+            print_stats(&lat_us);
+            lat_us.clear();
+            last_print = std::time::Instant::now();
+        }
         if let Some(s) = &mut sink {
             let out = Frame::new(FrameType::Verdict, f.seq, f.ts_ns, verdict_enc(clf.class_index(&cls), conf));
             s.write_all(&out.encode()).unwrap();

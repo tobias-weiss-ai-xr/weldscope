@@ -34,3 +34,9 @@ End-to-end latency = (local now − frame.ts_ns) at the VERDICT consumer,
 aggregated by the ai module as mean/p50/p99 over rolling 2-second windows.
 ts_ns is the acq-side spectrum production timestamp and is preserved by every
 module on forwarding.
+
+## Latency metric
+End-to-end latency = (local now − frame.ts_ns) at the VERDICT consumer,
+aggregated by the ai module as mean/p50/p99 over rolling 2-second windows.
+ts_ns is the acq-side spectrum production timestamp and is preserved by every
+module on forwarding.
