@@ -83,8 +83,22 @@ impl FrameReader {
         let len = u32::from_le_bytes(hdr[20..24].try_into().unwrap()) as usize;
         let mut payload = vec![0u8; len];
         self.s.read_exact(&mut payload)?;
-        let mut f = Frame::decode(&hdr).unwrap(); // header validated above
-        f.payload = payload;
+        // Build directly from the header: Frame::decode needs the full buffer
+        // (header + payload) and returns None for a header-only slice.
+        let ty = match hdr[3] {
+            0 => FrameType::Spectrum,
+            1 => FrameType::DepthTrace,
+            2 => FrameType::Features,
+            3 => FrameType::Verdict,
+            4 => FrameType::Hello,
+            _ => FrameType::Bye,
+        };
+        let f = Frame {
+            ty,
+            seq: u64::from_le_bytes(hdr[4..12].try_into().unwrap()),
+            ts_ns: u64::from_le_bytes(hdr[12..20].try_into().unwrap()),
+            payload,
+        };
         Ok(f)
     }
 }

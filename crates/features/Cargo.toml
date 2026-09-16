@@ -2,3 +2,10 @@
 name = "features"
 version.workspace = true
 edition.workspace = true
+
+[dependencies]
+io = { path = "../io" }
+
+[[bin]]
+name = "features"
+path = "src/main.rs"

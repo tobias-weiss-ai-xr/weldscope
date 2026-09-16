@@ -6,5 +6,4 @@ edition.workspace = true
 [dependencies]
 realfft.workspace = true
 num-complex.workspace = true
-sim = { path = "../sim" }
-serde_json.workspace = true
+io = { path = "../io" }

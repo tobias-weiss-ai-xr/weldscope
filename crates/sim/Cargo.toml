@@ -9,3 +9,9 @@ num-complex.workspace = true
 rand.workspace = true
 rand_distr.workspace = true
 serde.workspace = true
+io = { path = "../io" }
+serde_json.workspace = true
+
+[[bin]]
+name = "acq"
+path = "src/main.rs"

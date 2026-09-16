@@ -6,3 +6,8 @@ edition.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+io = { path = "../io" }
+
+[[bin]]
+name = "ai"
+path = "src/main.rs"
