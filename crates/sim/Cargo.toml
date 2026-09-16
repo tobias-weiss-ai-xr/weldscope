@@ -12,6 +12,11 @@ serde.workspace = true
 io = { path = "../io" }
 serde_json.workspace = true
 
+# rand pulls getrandom, which needs its "js" feature to compile for
+# wasm32-unknown-unknown (required for the in-browser WASM demo build).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
 [[bin]]
 name = "acq"
 path = "src/main.rs"
